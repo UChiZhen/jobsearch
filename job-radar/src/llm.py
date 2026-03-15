@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from threading import Lock
 
-import google.generativeai as genai
+from google import genai
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -60,10 +60,9 @@ class GeminiClient:
         
         # Initialize Gemini
         if not dry_run:
-            genai.configure(api_key=config.gemini.api_key)
-            self.model = genai.GenerativeModel(self.model_name)
+            self.client = genai.Client(api_key=config.gemini.api_key)
         else:
-            self.model = None
+            self.client = None
         
         # Rate limiting state
         self._rate_state = RateLimitState()
@@ -138,14 +137,14 @@ class GeminiClient:
         - 429 (rate limit)
         - 500/503 (server errors)
         """
-        response = self.model.generate_content(prompt)
-        
-        if response.prompt_feedback and response.prompt_feedback.block_reason:
-            raise ValueError(f"Prompt blocked: {response.prompt_feedback.block_reason}")
-        
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+        )
+
         if not response.text:
             raise ValueError("Empty response from API")
-        
+
         return response.text
     
     def generate(
