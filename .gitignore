@@ -1,0 +1,60 @@
+# ============================================================
+# Secrets / credentials — NEVER commit
+# ============================================================
+.env
+*.env
+!.env.example
+# OAuth / API credential files anywhere in the tree
+**/credentials*.json
+**/token*.json
+**/client_secret*.json
+**/config/*.json
+*.pem
+*.key
+# Personal profile used for scoring (not for publication)
+**/user_profile.yaml
+# Local macOS launchd schedules (contain local paths / username)
+*.plist
+
+# ============================================================
+# Local data
+# ============================================================
+**/data/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.xlsx
+*.xls
+*.csv
+
+# ============================================================
+# Logs
+# ============================================================
+**/logs/
+*.log
+
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+build/
+dist/
+
+# ============================================================
+# OS / editor junk
+# ============================================================
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+Icon
