@@ -150,6 +150,14 @@ class JobExtractor:
             page_content=truncate_text(page_content, self.config.gemini.max_input_chars),
         )
     
+    def _ensure_string(self, value) -> str:
+        """Convert value to string, handling lists from LLM responses."""
+        if value is None:
+            return ""
+        if isinstance(value, list):
+            return "; ".join(str(item) for item in value)
+        return str(value)
+    
     def _parse_response(self, response_text: str) -> Dict[str, Any]:
         """Parse LLM response JSON."""
         # Try to extract JSON from response
@@ -239,10 +247,10 @@ class JobExtractor:
                     post_date=job_data.get("post_date"),
                     fit_score=int(job_data.get("fit_score", 0)),
                     recommended_action=job_data.get("recommended_action", "archive"),
-                    top_reasons=job_data.get("top_reasons", ""),
-                    risks=job_data.get("risks", ""),
-                    resume_angle=job_data.get("resume_angle", ""),
-                    keywords=job_data.get("keywords", ""),
+                    top_reasons=self._ensure_string(job_data.get("top_reasons", "")),
+                    risks=self._ensure_string(job_data.get("risks", "")),
+                    resume_angle=self._ensure_string(job_data.get("resume_angle", "")),
+                    keywords=self._ensure_string(job_data.get("keywords", "")),
                     content_hash=content_hash,
                     raw_text=truncate_text(page_content, 5000),  # Store truncated version
                 )

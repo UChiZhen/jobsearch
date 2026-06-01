@@ -233,6 +233,15 @@ class Database:
         job_id = job["job_id"]
         now = datetime.utcnow().isoformat()
         
+        # Defensive: ensure text fields are strings (LLM sometimes returns lists)
+        for field in ("top_reasons", "risks", "resume_angle", "keywords", "raw_text",
+                       "job_title", "location", "country", "city", "job_url", "post_date"):
+            val = job.get(field)
+            if isinstance(val, list):
+                job[field] = "; ".join(str(v) for v in val)
+            elif val is not None and not isinstance(val, str):
+                job[field] = str(val)
+        
         existing = self.get_job_by_id(job_id)
         
         if existing is None:
