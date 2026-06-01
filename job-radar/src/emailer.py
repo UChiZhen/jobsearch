@@ -21,8 +21,10 @@ from .config import get_config
 
 # Gmail API scopes
 SCOPES = [
+    'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/gmail.send',
-    'https://www.googleapis.com/auth/gmail.readonly',  # For reading user profile
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/drive.file',
 ]
 
 
