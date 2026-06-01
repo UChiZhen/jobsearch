@@ -33,10 +33,37 @@ def generate_job_id(org_name: str, job_title: str, location: str,
     
     # Generate from components
     org_part = normalize_text(org_name)
-    title_part = normalize_text(job_title)
+    title_part = normalize_job_title(job_title)
     location_part = normalize_location(location)
     
     return f"{org_part}_{title_part}_{location_part}"
+
+
+def normalize_job_title(title: str) -> str:
+    """
+    Normalize job title for stable deduplication.
+    Removes common variations like 'Fellow' vs 'Fellowship'.
+    """
+    if not title:
+        return "unknown_title"
+    
+    title = title.lower().strip()
+    
+    # Remove common suffixes/variations that cause duplicates
+    replacements = [
+        (r'\bfellowship\b', 'fellow'),
+        (r'\binternship\b', 'intern'),
+        (r'\bassociateship\b', 'associate'),
+        (r'\banalyst\b', 'analyst'),
+        (r'\s*\([^)]*\)\s*', ''),  # Remove parenthetical content
+        (r'\s*-\s*', '_'),  # Normalize dashes to underscores
+        (r'\s*,\s*', '_'),  # Normalize commas
+    ]
+    
+    for pattern, replacement in replacements:
+        title = re.sub(pattern, replacement, title)
+    
+    return normalize_text(title)[:50]  # Limit length
 
 
 def normalize_text(text: str) -> str:
