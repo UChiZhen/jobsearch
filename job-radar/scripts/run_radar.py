@@ -4,6 +4,7 @@ Main entry point for Job Radar.
 Runs the job scanning pipeline with LLM extraction and Google Sheets integration.
 """
 
+import ssl
 import sys
 import time
 import argparse
@@ -87,7 +88,13 @@ class JobRadar:
         
         # Get organizations - prefer Sheets if available
         if self.sheets:
-            orgs = self._get_orgs_from_sheets(limit)
+            try:
+                orgs = self._get_orgs_from_sheets(limit)
+            except Exception as e:
+                console.print(f"[yellow]⚠️ Sheets read failed: {e}[/yellow]")
+                console.print("[yellow]   Falling back to local DB...[/yellow]")
+                self.sheets = None  # Disable Sheets for rest of run
+                orgs = self.db.get_active_organizations(limit=limit)
         else:
             orgs = self.db.get_active_organizations(limit=limit)
         
@@ -124,21 +131,41 @@ class JobRadar:
             "duration_seconds": duration,
         })
         
-        # Export new jobs to Sheets
+        # Export new jobs to Sheets (with retry for transient SSL/network errors)
         if self.sheets and self.new_jobs and not self.dry_run:
             console.print("\n📤 Exporting to Google Sheets...")
-            self.sheets.append_job_results(self.new_jobs)
+            self._retry_with_backoff(
+                lambda: self.sheets.append_job_results(self.new_jobs),
+                description="Sheets export",
+            )
             console.print(f"   ✓ View at: {self.sheets.get_spreadsheet_url()}")
         
-        # Send email report
+        # Send email report (with retry for transient errors)
         if self.send_email and not self.dry_run:
-            self._send_email_report()
+            self._retry_with_backoff(
+                self._send_email_report,
+                description="Email report",
+            )
         
         # Print summary
         self._print_summary(duration)
         
         return self.run_id
     
+    def _retry_with_backoff(self, func, description: str = "operation", max_retries: int = 3, base_delay: float = 5.0):
+        """Retry a function with exponential backoff on transient errors."""
+        for attempt in range(1, max_retries + 1):
+            try:
+                return func()
+            except (ssl.SSLEOFError, ssl.SSLError, ConnectionError, OSError, TimeoutError) as e:
+                if attempt == max_retries:
+                    console.print(f"   ❌ {description} failed after {max_retries} attempts: {e}")
+                    raise
+                delay = base_delay * (2 ** (attempt - 1))
+                console.print(f"   ⚠️  {description} attempt {attempt}/{max_retries} failed: {e}")
+                console.print(f"   🔄 Retrying in {delay:.0f}s...")
+                time.sleep(delay)
+
     def _send_email_report(self):
         """Send email report with job results."""
         console.print("\n📧 Sending email report...")
